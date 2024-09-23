@@ -1,6 +1,5 @@
 // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 mod ip;
-mod tcp;
 
 fn main() {
     let nic =
@@ -19,23 +18,48 @@ fn main() {
         };
 
         // TUN TCP Frame Format: https://docs.kernel.org/networking/tuntap.html#frame-format
-        let flags = u16::from_be_bytes([buffer[0], buffer[1]]);
-        let proto = u16::from_be_bytes([buffer[2], buffer[3]]);
+        let _eth_flags = u16::from_be_bytes([buffer[0], buffer[1]]);
+        let eth_proto = u16::from_be_bytes([buffer[2], buffer[3]]);
 
         // Hexadecimal values of protocols: https://en.wikipedia.org/wiki/EtherType
-        if proto != 0x0800 {
+        if eth_proto != 0x0800 {
             // No IPv4
             continue;
         }
 
-        let header = match ip::ip::IPv4Header::from_slice(&buffer[4..]) {
+        let packet = match ip::ipv4::IPv4Payload::from_slice(&buffer[4..]) {
             Ok(v) => v,
             Err(e) => {
-                panic!("{}", e.message);
+                eprintln!("{}", e.message);
+                continue;
             }
         };
 
-        dbg!(header);
+        let payload_length = match packet.get_header().get_total_length() {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{}", e.message);
+                continue;
+            }
+        };
+
+        let data = match String::from_utf8(packet.get_data().clone()) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error parsing: {}", e);
+                continue;
+            }
+        };
+
+        println!(
+            "{} {} protocol={} len={} data={}",
+            packet.get_header().get_source_address(),
+            packet.get_header().get_destination_address(),
+            packet.get_header().get_protocol(),
+            payload_length,
+            data,
+            // packet.get_data(),
+        );
 
         // println!("Read {} Bytes: {:x?}", nbytes, &buffer[4..nbytes]);
         // println!("Flags {} Proto: {:x}", flags, proto);
