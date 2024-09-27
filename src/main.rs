@@ -1,5 +1,8 @@
+use tcp::tcp::{TCPHeader, TCPPayload};
+
 // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 mod ip;
+mod tcp;
 
 fn main() {
     let nic =
@@ -27,7 +30,7 @@ fn main() {
             continue;
         }
 
-        let packet = match ip::ipv4::IPv4Payload::from_slice(&buffer[4..]) {
+        let ip_payload = match ip::ipv4::IPv4Payload::from_slice(&buffer[4..]) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.message);
@@ -35,33 +38,49 @@ fn main() {
             }
         };
 
-        let payload_length = match packet.get_header().get_total_length() {
+        // let payload_length = match ip_payload.get_header().get_total_length() {
+        //     Ok(v) => v,
+        //     Err(e) => {
+        //         eprintln!("{}", e.message);
+        //         continue;
+        //     }
+        // };
+
+        // let data = match String::from_utf8(packet.get_data().clone()) {
+        //     Ok(v) => v,
+        //     Err(e) => {
+        //         eprintln!("Error parsing: {}", e);
+        //         continue;
+        //     }
+        // };
+
+        // println!(
+        //     "{} {} protocol={} len={} bytes",
+        //     ip_payload.get_header().get_source_address(),
+        //     ip_payload.get_header().get_destination_address(),
+        //     ip_payload.get_header().get_protocol(),
+        //     payload_length,
+        //     // packet.get_data(),
+        // );
+
+        if ip_payload.get_header().get_protocol() != 0x06 {
+            // Not a TCP packet
+            continue;
+        }
+
+        let tcp_payload = match TCPPayload::from_slice(&ip_payload.get_data().as_slice()) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.message);
-                continue;
-            }
-        };
-
-        let data = match String::from_utf8(packet.get_data().clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("Error parsing: {}", e);
                 continue;
             }
         };
 
         println!(
-            "{} {} protocol={} len={} data={}",
-            packet.get_header().get_source_address(),
-            packet.get_header().get_destination_address(),
-            packet.get_header().get_protocol(),
-            payload_length,
-            data,
-            // packet.get_data(),
+            "Source={} | Destination={} | Data={:?}",
+            tcp_payload.header.source_port,
+            tcp_payload.header.destination_port,
+            tcp_payload.get_data()
         );
-
-        // println!("Read {} Bytes: {:x?}", nbytes, &buffer[4..nbytes]);
-        // println!("Flags {} Proto: {:x}", flags, proto);
     }
 }

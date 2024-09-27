@@ -4,15 +4,10 @@ pub mod ipv4 {
 
     pub const HEADER_MIN_LENGTH: usize = 20; // 20 bytes
     pub const HEADER_MAX_LENGTH: usize = 60; // 60 bytes
+
     #[derive(Debug)]
     pub struct IPv4ParsingError {
         pub message: String,
-    }
-
-    impl fmt::Display for IPv4ParsingError {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            return write!(f, "{}", self.message);
-        }
     }
 
     #[derive(Debug)]
