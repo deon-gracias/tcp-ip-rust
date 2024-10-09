@@ -1,10 +1,13 @@
-use tcp::tcp::{TCPHeader, TCPPayload};
+use std::collections::HashMap;
 
+// https://tools.ietf.org/html/rfc793
 // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 mod ip;
 mod tcp;
 
 fn main() {
+    let mut connections: HashMap<tcp::StateQuad, tcp::TCPState> = Default::default();
+
     let nic =
         tun_tap::Iface::new("tun0", tun_tap::Mode::Tun).expect("Failed to create a TUN device");
 
@@ -30,57 +33,43 @@ fn main() {
             continue;
         }
 
-        let ip_payload = match ip::ipv4::IPv4Payload::from_slice(&buffer[4..]) {
+        let ip_payload = match etherparse::Ipv4Slice::from_slice(&buffer[4..nbytes]) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("{}", e.message);
+                eprintln!("Err: {:?}", e);
                 continue;
             }
         };
 
-        // let payload_length = match ip_payload.get_header().get_total_length() {
-        //     Ok(v) => v,
-        //     Err(e) => {
-        //         eprintln!("{}", e.message);
-        //         continue;
-        //     }
-        // };
-
-        // let data = match String::from_utf8(packet.get_data().clone()) {
-        //     Ok(v) => v,
-        //     Err(e) => {
-        //         eprintln!("Error parsing: {}", e);
-        //         continue;
-        //     }
-        // };
-
-        // println!(
-        //     "{} {} protocol={} len={} bytes",
-        //     ip_payload.get_header().get_source_address(),
-        //     ip_payload.get_header().get_destination_address(),
-        //     ip_payload.get_header().get_protocol(),
-        //     payload_length,
-        //     // packet.get_data(),
-        // );
-
-        if ip_payload.get_header().get_protocol() != 0x06 {
+        if ip_payload.header().protocol() != etherparse::IpNumber::TCP {
             // Not a TCP packet
             continue;
         }
 
-        let tcp_payload = match TCPPayload::from_slice(&ip_payload.get_data().as_slice()) {
+        let tcp_payload = match etherparse::TcpSlice::from_slice(ip_payload.payload().payload) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("{}", e.message);
+                eprintln!("Err: {:?}", e);
                 continue;
             }
         };
 
-        println!(
-            "Source={} | Destination={} | Data={:?}",
-            tcp_payload.header.source_port,
-            tcp_payload.header.destination_port,
-            tcp_payload.get_data()
-        );
+        // Check connection
+        let _ = connections
+            .entry(tcp::StateQuad {
+                source: (ip_payload.header().source_addr(), tcp_payload.source_port()),
+                destination: (
+                    ip_payload.header().destination_addr(),
+                    tcp_payload.destination_port(),
+                ),
+            })
+            .or_default()
+            .on_packet(
+                &nic,
+                ip_payload.header(),
+                etherparse::TcpHeaderSlice::from_slice(tcp_payload.header_slice())
+                    .expect("Parse shouldn't Fail"),
+                tcp_payload.payload(),
+            );
     }
 }

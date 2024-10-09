@@ -1,5 +1,4 @@
 pub mod ipv4 {
-    use core::fmt;
     use std::{net::Ipv4Addr, u16};
 
     pub const HEADER_MIN_LENGTH: usize = 20; // 20 bytes
@@ -10,22 +9,22 @@ pub mod ipv4 {
         pub message: String,
     }
 
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     pub struct IPv4Header {
-        version: u8,                            // 4 bits
-        ihl: u8,                                // 4 bits
-        differentiated_services_code_point: u8, // 6 bits
-        explicit_congestion_notification: u8,   // 2 bits
-        total_length: u16,                      // 16 bits
-        identification: u16,                    // 16 bits
-        flags: u8,                              // 3 bits
-        fragment_offset: u16,                   // 13 bits
-        time_to_live: u8,                       // 8 bits
-        protocol: u8,                           // 8 bits
-        header_checksum: u16,                   // 16 bits
-        source_address: Ipv4Addr,               // 32 bits
-        destination_address: Ipv4Addr,          // 32 bits
-        options: Vec<u8>,
+        pub version: u8,                            // 4 bits
+        pub ihl: u8,                                // 4 bits
+        pub differentiated_services_code_point: u8, // 6 bits
+        pub explicit_congestion_notification: u8,   // 2 bits
+        pub total_length: u16,                      // 16 bits
+        pub identification: u16,                    // 16 bits
+        pub flags: u8,                              // 3 bits
+        pub fragment_offset: u16,                   // 13 bits
+        pub time_to_live: u8,                       // 8 bits
+        pub protocol: u8,                           // 8 bits
+        pub header_checksum: u16,                   // 16 bits
+        pub source_address: Ipv4Addr,               // 32 bits
+        pub destination_address: Ipv4Addr,          // 32 bits
+        pub options: Vec<u8>,
     }
 
     #[derive(Debug)]
@@ -36,8 +35,8 @@ pub mod ipv4 {
     }
 
     pub struct IPv4Payload {
-        header: IPv4Header,
-        bytes: Vec<u8>,
+        pub header: IPv4Header,
+        pub bytes: Vec<u8>,
     }
 
     impl IPv4Payload {
